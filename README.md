@@ -10,4 +10,4 @@ Matrix Multiplication
 - Each process holds result’s N/K part
 
 
-![](MPI_MatrixMultiplication/foto.JPG)
+![](C:\Users\Anil\git\MPI_MatrixMultiplication\foto.JPG)
