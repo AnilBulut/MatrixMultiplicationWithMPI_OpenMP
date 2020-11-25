@@ -7,7 +7,7 @@ Matrix Multiplication
 - N must be given as parameter.
 - Each process creates N/K row in A and B matrix
 - B matrix is gathered from all processes
-- Each process holds result’s N/K part
+- Each process holds resultâ€™s N/K part
 
 
-![](C:\Users\Anil\git\MPI_MatrixMultiplication\foto.JPG)
+![](C:\Users\Anil\git\MPI_MatrixMultiplication\foto.JPG?raw=true)
