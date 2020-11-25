@@ -10,4 +10,5 @@ Matrix Multiplication
 - Each process holds result’s N/K part
 
 
-![](C:\Users\Anil\git\MPI_MatrixMultiplication\foto.JPG?raw=true)
+![Architecture](https://user-images.githubusercontent.com/26605040/100268496-2d69a500-2f66-11eb-8e35-4291a3c90661.JPG)
+
