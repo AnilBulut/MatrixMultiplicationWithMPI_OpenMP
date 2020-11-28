@@ -1,14 +1,18 @@
-﻿
+﻿#ifdef _WIN32
+#define _CRT_SECURE_NO_DEPRECATE
+#endif
+
 #include "mpi.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <cstdlib>
 
 
-double* fillTwoDimensionalArray(double* matrix_A, int numberOfRowsPerTask,int totalSize, int upper, int lower, int taskid);
-double* fillOneDimensionalArray(double* matrix_B, int numberOfRowsPerTask, int upper, int lower, int taskid);
-void rowMatrixVectorMultiply(int n, double* a, double* b, double* x, MPI_Comm comm,int taskID);
+double* fillTwoDimensionalArray(double* matrix_A, int numberOfRowsPerTask,int totalSize,int taskID); //filling matrix A
+double* fillOneDimensionalArray(double* matrix_B, int numberOfRowsPerTask,int taskid); //filling matrix B
+void rowMatrixVectorMultiply(int n, double* a, double* b, double* x, MPI_Comm comm,int taskID); //matrix multiplication
+double calculateMemoryUsage(int numberOfRowsPerTask, int matrixSize); //calculating total used memory
+void writeFile(char resultString[],char fileName[]); //writing results to txt file
 
 int main(int argc, char* argv[])
 {
@@ -21,21 +25,14 @@ int main(int argc, char* argv[])
     {
         int	numberOfTasks, taskID; //this variables will be used in MPI.                              
         int matrixSize = atoi(argv[1]); //square matrix size which will come as input
-       
+        double totalTime = 0 , totalMemory = 0;  //total elapsed time and total used memory
         int rowsPerTask = 0; //initiliazer for rows per task
-
-        /* this part is generated random elements for matrix A and matrix B
-        each task generates random number in a range between ((1,2)* taskID)
-        */
-        int lower = 1, upper = 2;
-        srand(time(0)); //seed for random number generator
 
         //initiliazing mpi library
         MPI_Init(&argc, &argv);
         MPI_Comm_rank(MPI_COMM_WORLD, &taskID);
         MPI_Comm_size(MPI_COMM_WORLD, &numberOfTasks);
 
-        double t1 = MPI_Wtime();
         //checking number of arguments to ensure program works correctly
         if (matrixSize < numberOfTasks)
         {
@@ -51,21 +48,41 @@ int main(int argc, char* argv[])
         }
 
 
+       
 
         rowsPerTask = matrixSize / numberOfTasks; //finding number of rows which are handled by each task
         //creating matrix A and B for each task
         double* matrix_A = (double*)malloc(rowsPerTask * matrixSize * sizeof(double)); //creating matrix a in the size of N*N
         double* matrix_B = (double*)malloc(rowsPerTask * sizeof(double)); //creating matrix in the size of N*1
         double* matrix_X = (double*)malloc(rowsPerTask * sizeof(double)); //creating matrix in the size of N*1
-        matrix_A = fillTwoDimensionalArray(matrix_A, rowsPerTask, matrixSize, upper, lower, taskID); //filling matrix A with random numbers
-        matrix_B = fillOneDimensionalArray(matrix_B, rowsPerTask, upper, lower, taskID); //filling matrix B with random numbers
-        //MPI_Barrier(MPI_COMM_WORLD); // I've used MPI_Barriare here to ensure all tasks created their random rows before multiply them
 
-       
+        matrix_A = fillTwoDimensionalArray(matrix_A, rowsPerTask, matrixSize, taskID); //filling matrix A with random numbers
+        matrix_B = fillOneDimensionalArray(matrix_B, rowsPerTask, taskID); //filling matrix B with random numbers
+
+        MPI_Barrier(MPI_COMM_WORLD);  //using barrier before multiplication
+        double t1 = MPI_Wtime();
         rowMatrixVectorMultiply(matrixSize, matrix_A, matrix_B, matrix_X, MPI_COMM_WORLD, taskID); //multiplying created matrixes
-
+        MPI_Barrier(MPI_COMM_WORLD); //using barrier after multiplication
         double t2 = MPI_Wtime();
-        printf("Elapsed time is %f\n", t2 - t1);
+        
+        double result = t2 - t1;
+
+
+        //since we've used barrier, only checking one task to find elapsed time
+        //used memory calculation is same for all tasks
+        if (taskID == 0)
+        {
+            totalTime = result;
+            totalMemory = calculateMemoryUsage(rowsPerTask, matrixSize);
+
+            //preparing the result string which is going to be in txt file
+            char resultString[100];
+            snprintf(resultString, 100, "%d\t%d\t%.3f\t%.3f\n", matrixSize, numberOfTasks, totalTime, totalMemory);
+
+            char fileName[] = "res.txt";
+            writeFile(resultString, fileName);
+        }
+
         MPI_Finalize();
     }
     else
@@ -77,34 +94,30 @@ int main(int argc, char* argv[])
    
 }
 
-double* fillTwoDimensionalArray(double* matrix_A, int numberOfRowsPerTask, int totalSize,int upper, int lower, int taskid)
+double* fillTwoDimensionalArray(double* matrix_A, int numberOfRowsPerTask, int matrixSize, int taskID)
 {
     size_t i;
     size_t j;
 
-    
     for (i = 0; i < numberOfRowsPerTask; i++)
     {
-        for (j = 0; j < totalSize; j++)
+        for (j = 0; j < matrixSize; j++)
         {
-            
-            double rand_num = (rand() % (upper - lower + 1)) + upper;                  
-            rand_num = rand_num*(taskid+1);          
-            *(matrix_A + i * totalSize + j) = rand_num;         
+            int number = (taskID + 1);
+            *(matrix_A + i * matrixSize + j) = number;
         }
 
     }
     
     return matrix_A;
 }
-double* fillOneDimensionalArray(double* matrix_B, int numberOfRowsPerTask, int upper, int lower, int taskid)
+double* fillOneDimensionalArray(double* matrix_B, int numberOfRowsPerTask,int taskID)
 {
     int i;
     for (i = 0; i < numberOfRowsPerTask; i++)
     {
-        double rand_num = (rand() % (upper - lower + 1)) + upper;
-        rand_num = rand_num * (taskid + 1);
-         *(matrix_B + i) = rand_num;
+        double number = (taskID + 1);
+         *(matrix_B + i) = number;
     }
     return matrix_B;
 }
@@ -115,7 +128,6 @@ void rowMatrixVectorMultiply(int n, double* a, double* b, double* x,MPI_Comm com
     int nlocal; /* Number of locally stored rows of A */
     double* fb; /* Will point to a buffer that stores the entire vector b */
     int npes, myrank;
-    MPI_Status status;
 
     /* Get information about the communicator */
     MPI_Comm_size(comm, &npes);
@@ -137,4 +149,23 @@ void rowMatrixVectorMultiply(int n, double* a, double* b, double* x,MPI_Comm com
     }
  
     free(fb);
+}
+
+double calculateMemoryUsage(int numberOfRowsPerTask, int matrixSize)
+{
+    unsigned long resultAsByte = 0;
+    resultAsByte = numberOfRowsPerTask * matrixSize * sizeof(double); //matrix A
+    resultAsByte = resultAsByte + numberOfRowsPerTask * sizeof(double); //matrix B
+    resultAsByte = resultAsByte + numberOfRowsPerTask * sizeof(double); //matrix X
+    double resultAsGB = (double)resultAsByte / (1024 * 1024 * 1024); //converting to GB
+ 
+    return resultAsGB;
+}
+
+void writeFile(char resultString[], char fileName[])
+{
+    FILE* filePointer;
+    filePointer = fopen(fileName, "a");
+    fputs(resultString, filePointer);
+    fclose(filePointer);
 }
