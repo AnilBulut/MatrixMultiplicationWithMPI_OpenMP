@@ -84,6 +84,9 @@ int main(int argc, char* argv[])
         }
 
         MPI_Finalize();
+	free(matrix_A);
+        free(matrix_B);
+        free(matrix_X);
     }
     else
     {
