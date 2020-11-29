@@ -5,8 +5,7 @@
 #include "mpi.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <cstdlib>
-
+#include <string.h>
 
 double* fillTwoDimensionalArray(double* matrix_A, int numberOfRowsPerTask,int totalSize,int taskID); //filling matrix A
 double* fillOneDimensionalArray(double* matrix_B, int numberOfRowsPerTask,int taskid); //filling matrix B
@@ -23,6 +22,7 @@ int main(int argc, char* argv[])
     }
     else if (argc == 2)
     {
+        printf("Matrix Size:%d\n", atoi(argv[1]));
         int	numberOfTasks, taskID; //this variables will be used in MPI.                              
         int matrixSize = atoi(argv[1]); //square matrix size which will come as input
         double totalTime = 0 , totalMemory = 0;  //total elapsed time and total used memory
@@ -74,6 +74,7 @@ int main(int argc, char* argv[])
         {
             totalTime = result;
             totalMemory = calculateMemoryUsage(rowsPerTask, matrixSize);
+            totalMemory = totalMemory * numberOfTasks; //calculating total memory usage from all processor
 
             //preparing the result string which is going to be in txt file
             char resultString[100];
