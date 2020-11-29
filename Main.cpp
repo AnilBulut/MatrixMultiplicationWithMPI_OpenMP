@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
         }
 
         MPI_Finalize();
-	free(matrix_A);
+        free(matrix_A);
         free(matrix_B);
         free(matrix_X);
     }
@@ -93,10 +93,13 @@ int main(int argc, char* argv[])
         printf("Wrong number of arguments, you should just enter the matrix size!\n");
         exit(0);
     }
+
+    
     return 0;
    
 }
 
+//matrix A is filling with taskID+1 
 double* fillTwoDimensionalArray(double* matrix_A, int numberOfRowsPerTask, int matrixSize, int taskID)
 {
     size_t i;
@@ -106,21 +109,20 @@ double* fillTwoDimensionalArray(double* matrix_A, int numberOfRowsPerTask, int m
     {
         for (j = 0; j < matrixSize; j++)
         {
-            int number = (taskID + 1);
-            *(matrix_A + i * matrixSize + j) = number;
+            *(matrix_A + i * matrixSize + j) = (taskID+1);
         }
 
     }
     
     return matrix_A;
 }
+//matrix B is filling with taskID+1 
 double* fillOneDimensionalArray(double* matrix_B, int numberOfRowsPerTask,int taskID)
 {
     int i;
     for (i = 0; i < numberOfRowsPerTask; i++)
     {
-        double number = (taskID + 1);
-         *(matrix_B + i) = number;
+        *(matrix_B + i) = (taskID + 1);
     }
     return matrix_B;
 }
